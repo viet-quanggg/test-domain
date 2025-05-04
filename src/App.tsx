@@ -1,0 +1,495 @@
+import './App.css'
+import { Stepper, Button, Group, Title, Stack, Box, Text, Image, Slider, Card, Container } from '@mantine/core';
+import { Dropzone, FileRejection, MIME_TYPES } from '@mantine/dropzone';
+import { IconUpload, IconPencil, IconEraser } from '@tabler/icons-react'; // Optional icons
+import 'react-mask-editor/dist/style.css'; // Importing the CSS for react-mask-editor
+import '@mantine/core/styles.css';
+import { useRef, useState, useEffect } from 'react';
+import { Stage, Layer, Image as KonvaImage, Line, Circle } from 'react-konva';
+import useImage from 'use-image';
+
+const logos = [
+  '/logos/Tensorrt.png',
+  '/logos/onnx.png',
+  '/logos/ec2.jpg',
+  '/logos/runpod.jpg',
+  '/logos/huggingface.png',
+  '/logos/triton.png',
+  '/logos/pythera.png',
+  '/logos/pytorchligting.png',
+  '/logos/fpt.svg',
+];
+
+<style>
+  {`
+    * {
+      margin: 0;
+      padding: 0;
+    }
+  `}
+</style>
+
+function App() {
+  const [preview, setPreview] = useState<string | null>(null);
+  const [active, setActive] = useState(0);
+  const nextStep = () => setActive((current) => (current < 5 ? current + 1 : current));
+  const prevStep = () => setActive((current) => Math.max(current - 1, 0));
+  const [lines, setLines] = useState<{ points: number[]; isErasing?: boolean; cursorSize?: number }[]>([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const stageRef = useRef<any>(null);
+  const [image] = useImage(preview || '');
+  const [isErasing, setIsErasing] = useState(false);
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
+  const [cursorSize, setCursorSize] = useState(20);
+
+  const handleDrop = (files: File[]) => {
+    const file = files[0];
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      console.log('Preview URL:', previewUrl);
+      console.log('File:', file);
+      console.log('Image:', image);
+      setPreview(previewUrl);
+    }
+  };
+
+  const handleRemove = () => {
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, []);
+
+  const handleMouseDown = (e: any) => {
+    setIsDrawing(true);
+    const stage = e.target.getStage();
+    const point = stage.getPointerPosition();
+    setLines([
+      ...lines,
+      {
+        points: [point.x, point.y],
+        isErasing,
+        cursorSize, // capture the current stroke width
+      },
+    ]);
+  };
+
+
+  const handleMouseMove = (e: any) => {
+    const stage = e.target.getStage();
+    const point = stage.getPointerPosition();
+    if (point) {
+      setMousePosition(point); // Update cursor position
+    }
+
+    if (!isDrawing) return;
+
+    const lastLine = lines[lines.length - 1];
+    const updatedLine = {
+      ...lastLine,
+      points: lastLine.points.concat([point.x, point.y]),
+    };
+    const newLines = [...lines.slice(0, -1), updatedLine];
+    setLines(newLines);
+  };
+
+  const handleMouseUp = () => {
+    setIsDrawing(false);
+  };
+
+  const clearLines = () => {
+    setLines([]);
+    setCursorSize(20);
+  };
+
+
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+  const maxWidth = screenWidth / 2;
+  const maxHeight = screenHeight;
+
+  let scale = 1;
+  let imageX = 0;
+  let imageY = 0;
+  let stageWidth = 0;
+  let stageHeight = 0;
+
+  if (image) {
+    const scaleX = maxWidth / image.width;
+    const scaleY = maxHeight / image.height;
+    scale = Math.min(scaleX, scaleY, 1);
+
+    const scaledWidth = image.width * scale;
+    const scaledHeight = image.height * scale;
+
+    stageWidth = maxWidth;
+    stageHeight = maxHeight;
+
+    // Center image in stage
+    imageX = (stageWidth - scaledWidth) / 2;
+    imageY = (stageHeight - scaledHeight) / 2;
+  }
+  return (
+    <>
+    <Box
+        style={{
+        position: 'fixed', // stays at the top
+        top: 0,
+        left: 0,
+        zIndex: 1000, // make sure it's above everything else
+        width: '100%',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        }}
+        mb={50}
+      >
+        <Box
+        component="div"
+        style={{
+          display: 'flex',
+          animation: `scroll-left 20s linear infinite`, // Adjust animation duration as needed
+        }}
+        >
+        {logos.map((logo, index) => (
+          <Image
+          key={index}
+          src={logo}
+          alt={`Logo ${index + 1}`}
+          height={50}
+          style={{
+            display: 'inline-block',
+            marginRight: '80px',
+            verticalAlign: 'middle',
+          }}
+          />
+        ))}
+        {logos.map((logo, index) => (
+          <Image
+          key={`duplicate-${index}`}
+          src={logo}
+          alt={`Logo ${index + 1}`}
+          height={50}
+          style={{
+            display: 'inline-block',
+            marginRight: '80px',
+            verticalAlign: 'middle',
+          }}
+          />
+        ))}
+        </Box>
+
+        <style>
+        {`
+        @keyframes scroll-left {
+        0% {
+          transform: translateX(0%);
+        }
+        100% {
+          transform: translateX(-100%);
+        }
+        }
+      `}
+        </style>
+      </Box>
+      <Container fluid pt={50}>
+        <Stack
+          align="stretch"
+          justify="center"
+          gap="lg"
+        >
+          <Box mb={10}>
+            <Title
+              order={1}
+              style={{
+                fontWeight: 800,
+                fontSize: '3rem',
+                textAlign: 'center',
+                background: 'linear-gradient(90deg, #00DBDE 0%, #FC00FF 100%)', // beautiful AI gradient
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 0 10px rgba(0, 219, 222, 0.5)', // subtle glow
+                letterSpacing: '1px',
+                animation: 'glowing 2.5s ease-in-out infinite alternate', // Add glowing animation
+              }}
+            >
+              DEEP LEARNING MECHANISM FOR OBJECT REMOVAL TO ENHANCE BACKGROUND
+            </Title>
+          </Box>
+          <Box p={30}
+            style={{
+              border: '1px solid #000',
+              borderRadius: '30px',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+            }}>
+            <Stepper active={active} onStepClick={setActive}>
+              <Stepper.Step label="Welcome" description="">
+                Step 1 content: Create an account
+              </Stepper.Step>
+              <Stepper.Step label="Select image" description="">
+                Step 2 content: Verify email
+              </Stepper.Step>
+              <Stepper.Step label="Masking the image" description="">
+                Step 3 content: Get full access
+              </Stepper.Step>
+              <Stepper.Step label="Processing Image" description="">
+                Step 4 content: Get full access
+              </Stepper.Step>
+              <Stepper.Step label="Final result" description="">
+                Step 5 content: Get full access
+              </Stepper.Step>
+              <Stepper.Completed>
+                Completed, click back button to get to previous step
+              </Stepper.Completed>
+            </Stepper>
+          </Box>
+          <Box
+            w={'100%'}
+            h={'100%'}
+            p={30} style={{
+              marginBottom: '50px',
+              border: '1px solid #000',
+              borderRadius: '30px',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+            }}
+          >
+            <>
+              {active === 0 && (
+                <>
+                  <Title>Welcome to ...</Title>
+                  <Text>Upload your photo to remove the background</Text>
+                  <Group justify="center" mt="xl">
+                    <Button onClick={nextStep}>Next step</Button>
+                  </Group>
+                </>
+              )}
+              {active === 1 && (
+                <>
+                  <Title>Upload Your Photo</Title>
+                  <Text mb={10}>Upload your photo to remove the background</Text>
+                  <Dropzone
+                    onDrop={handleDrop}
+                    onReject={(files: FileRejection[]) => {
+                      console.log('Rejected files', files);
+                    }}
+                    maxSize={5 * 1024 ** 2} // 5 MB
+                    accept={[MIME_TYPES.jpeg, MIME_TYPES.png]}
+                    multiple={false}
+                    style={{
+                      border: '1px dashed #ccc',
+                      borderRadius: '30px',
+                      height: preview ? stageHeight : '60vh', // Dynamic height for nice display
+                      backgroundColor: '#f9f9f9',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                    }}
+                  >
+                    {preview ? (
+                      <Image
+                        src={preview}
+                        alt="Preview"
+                        style={{
+                          border: '1px solid #ccc',
+                          marginTop: 20,
+                          borderRadius: '20px',
+                          display: 'flex',
+                          marginLeft: 'auto',
+                          marginRight: 'auto',
+                          overflow: 'hidden',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                        }}
+                      />
+                    ) : (
+                      <Group justify="center">
+                        <IconUpload size={50} stroke={1.5} color="#888" />
+                        <Text size="md" color="dimmed">Drag an image here or click to select</Text>
+                      </Group>
+                    )}
+                  </Dropzone>
+                  <Group justify="center" mt="xl">
+                    <Button variant="default" onClick={prevStep}>Back</Button>
+                    <Button onClick={nextStep}>Next step</Button>
+                  </Group>
+                  {preview && (
+                    <Button
+                      color="red"
+                      variant="light"
+                      onClick={handleRemove}
+                      mt="sm"
+                    >
+                      Remove Image
+                    </Button>
+                  )}
+                </>
+              )}
+              {active === 2 && (
+                <>
+                  <Title>Masking the Image</Title>
+                  <Text>Select where you want to remove</Text>
+                  <Card withBorder padding="lg" radius="md" mt="md">
+                    <Stack gap="md">
+                      <Group justify="space-between">
+                        <Group justify="flex-start">
+                          <Button leftSection={<IconEraser size={16} />} onClick={() => setIsErasing(true)} variant={isErasing ? "filled" : "outline"} color="red">Eraser</Button>
+                          <Button leftSection={<IconPencil size={16} />} onClick={() => setIsErasing(false)} variant={!isErasing ? "filled" : "outline"} color="blue">Draw</Button>
+                        </Group>
+                        <Button variant="outline" color="red" onClick={clearLines}>Reset All</Button>
+                      </Group>
+                      <Box>
+                        <Text size="sm" mb={4}>
+                          Brush Size: {cursorSize}px
+                        </Text>
+                        <Slider
+                          mb={10}
+                          color="blue"
+                          value={cursorSize}
+                          min={20}
+                          max={80}
+                          step={10}
+                          marks={[
+                            { value: 20, label: "20" },
+                            { value: 40, label: "40" },
+                            { value: 60, label: "60" },
+                            { value: 80, label: "80" },
+                          ]}
+                          onChange={setCursorSize}
+                        />
+                      </Box>
+                    </Stack>
+                  </Card>
+                  {image && (
+                    <>
+                      <Stage
+                        width={stageWidth}
+                        height={stageHeight}
+                        onMouseDown={handleMouseDown}
+                        onMousemove={handleMouseMove}
+                        onMouseup={handleMouseUp}
+                        ref={stageRef}
+                        onMouseLeave={() => setMousePosition(null)}
+                        style={{
+                          border: '1px solid #ccc',
+                          marginTop: 20,
+                          borderRadius: '20px',
+                          display: 'flex',
+                          marginLeft: 'auto',
+                          marginRight: 'auto',
+                          overflow: 'hidden',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                        }}
+                      >
+                        <Layer>
+                          <KonvaImage
+                            image={image}
+                            x={imageX}
+                            y={imageY}
+                            scale={{ x: scale, y: scale }}
+                          />
+                        </Layer>
+                        <Layer>
+                          {lines.map((line, i) => (
+                            <Line
+                              key={i}
+                              points={line.points}
+                              stroke="white"
+                              strokeWidth={line.cursorSize}
+                              tension={0.5}
+                              lineCap="round"
+                              lineJoin="round"
+                              globalCompositeOperation={line.isErasing ? 'destination-out' : 'source-over'}
+                            />
+                          ))}
+                          {mousePosition && (
+                            <Circle
+                              x={mousePosition.x}
+                              y={mousePosition.y}
+                              radius={cursorSize / 2}
+                              stroke={isErasing ? "red" : "blue"}
+                              strokeWidth={2}
+                              dash={[4, 4]}
+                              listening={false}
+                              opacity={0.8}
+                            />
+                          )}
+                        </Layer>
+                      </Stage>
+
+                    </>
+                  )}
+                  <Group justify="center" mt="xl">
+                    <Button variant="default" onClick={prevStep}>Back</Button>
+                    <Button onClick={nextStep}>Next step</Button>
+                  </Group>
+                </>
+              )}
+              {active === 3 && (
+                <>
+                  <Title>Processing Image</Title>
+                  <Text>Processing your image...</Text>
+                  <Group justify="center" mt="xl">
+                    <Button variant="default" onClick={prevStep}>Back</Button>
+                    <Button onClick={nextStep}>Next</Button>
+                  </Group>
+                </>
+              )}
+              {active === 4 && (
+                <>
+                  <Title>Final Result</Title>
+                  <Text>Your image has been processed successfully!</Text>
+                  <Group justify="center" mt="xl">
+                    <Button variant="default" onClick={prevStep}>Back</Button>
+                    <Button onClick={nextStep}>Next</Button>
+                  </Group>
+                </>
+              )}
+              {active === 5 && (
+                <>
+                  <Title>Thank You!</Title>
+                  <Text>Your image has been processed successfully!</Text>
+                  <Group justify="center" mt="xl">
+                    <Button variant="default" onClick={prevStep}>Back</Button>
+                    <Button onClick={nextStep}>Finish</Button>
+                  </Group>
+                </>
+              )}
+            </>
+          </Box>
+
+        </Stack>
+      </Container>
+
+      <style>
+        {`
+    @keyframes glowing {
+      0% {
+        text-shadow: 0 0 5px rgba(0, 219, 222, 0.5), 0 0 10px rgba(0, 219, 222, 0.3), 0 0 15px rgba(0, 219, 222, 0.1);
+        color: #00DBDE;
+      }
+      50% {
+        text-shadow: 0 0 20px rgba(0, 219, 222, 1), 0 0 30px rgba(0, 219, 222, 0.7), 0 0 50px rgba(0, 219, 222, 0.3);
+        color: #FC00FF;
+      }
+      100% {
+        text-shadow: 0 0 5px rgba(0, 219, 222, 0.5), 0 0 10px rgba(0, 219, 222, 0.3), 0 0 15px rgba(0, 219, 222, 0.1);
+        color: #00DBDE;
+      }
+    }
+  `}
+      </style>
+    </>
+  )
+}
+
+export default App
