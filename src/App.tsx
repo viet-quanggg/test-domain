@@ -465,18 +465,6 @@ function App() {
                         onMouseup={handleMouseUp}
                         ref={stageRef}
                         onMouseLeave={() => setMousePosition(null)}
-                        style={{
-                          border: '1px solid #ccc',
-                          marginTop: 20,
-                          borderRadius: '20px',
-                          display: 'flex',
-                          marginLeft: 'auto',
-                          marginRight: 'auto',
-                          overflow: 'hidden',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                        }}
                       >
                         <Layer>
                           <KonvaImage
