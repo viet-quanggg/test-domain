@@ -1,7 +1,7 @@
 import './App.css'
 import { Stepper, Button, Group, Title, Stack, Box, Text, Image, Slider, Card, Container, Loader } from '@mantine/core';
 import { Dropzone, FileRejection, MIME_TYPES } from '@mantine/dropzone';
-import { IconUpload, IconPencil, IconEraser } from '@tabler/icons-react'; // Optional icons
+import { IconUpload, IconPencil, IconEraser, IconCircleCheck } from '@tabler/icons-react'; // Optional icons
 import 'react-mask-editor/dist/style.css'; // Importing the CSS for react-mask-editor
 import '@mantine/core/styles.css';
 import { useRef, useState, useEffect } from 'react';
@@ -13,11 +13,11 @@ const logos = [
   '/logos/onnx.png',
   '/logos/ec2.jpg',
   '/logos/runpod.jpg',
-  '/logos/huggingface.png',
   '/logos/triton.png',
   '/logos/pythera.png',
   '/logos/pytorchligting.png',
   '/logos/fpt.svg',
+  '/logos/hf-logo-with-title.png',
 ];
 
 <style>
@@ -146,7 +146,9 @@ function App() {
   const maxHeight = screenHeight;
 
   let scale = 1;
+  // @ts-expect-error: Exclude from build
   let imageX = 0;
+  // @ts-expect-error: Exclude from build
   let imageY = 0;
   let stageWidth = 0;
   let stageHeight = 0;
@@ -180,8 +182,8 @@ function App() {
     }
   
     const API_KEY = "rpa_I45AJ1AT9H80SE3EKW520CDRHAN7VY9PT7Z7429Z1z0e6t";
-    const scale = 1.0;
-    const step = 50;
+    const scale = 2.5;
+    const step = 60;
   
     const payload = {
       input: {
@@ -317,223 +319,217 @@ function App() {
             }}>
             <Stepper active={active} onStepClick={setActive}>
               <Stepper.Step label="Welcome" description="">
-                Step 1 content: Create an account
               </Stepper.Step>
               <Stepper.Step label="Select image" description="">
-                Step 2 content: Verify email
               </Stepper.Step>
               <Stepper.Step label="Masking the image" description="">
-                Step 3 content: Get full access
               </Stepper.Step>
               <Stepper.Step label="Processing Image" description="">
-                Step 4 content: Get full access
               </Stepper.Step>
               <Stepper.Step label="Final result" description="">
-                Step 5 content: Get full access
               </Stepper.Step>
               <Stepper.Completed>
-                Completed, click back button to get to previous step
+                Completed, click finish to send a new request
               </Stepper.Completed>
             </Stepper>
           </Box>
-          <Box
-            w={'100%'}
-            h={'100%'}
-            p={30} style={{
-              marginBottom: '50px',
-              border: '1px solid #000',
-              borderRadius: '30px',
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+            <Box
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: image ? image.width : '100%',
+              height: 'auto', // Automatically adjusts height based on content
+              padding: 30,
             }}
-          >
+            >
             <>
               {active === 0 && (
-                <>
-                  <Title>Welcome to ...</Title>
-                  <Text>Upload your photo to remove the background</Text>
-                  <Group justify="center" mt="xl">
-                    <Button onClick={nextStep}>Next step</Button>
-                  </Group>
-                </>
+              <>
+                <Title>Welcome to ...</Title>
+                <Text>Upload your photo to remove the background</Text>
+                <Group justify="center" mt="xl">
+                <Button onClick={nextStep}>Next step</Button>
+                </Group>
+              </>
               )}
               {active === 1 && (
-                <>
-                  <Title>Upload Your Photo</Title>
-                  <Text mb={10}>Upload your photo to remove the background</Text>
-                  <Dropzone
-                    onDrop={handleDrop}
-                    onReject={(files: FileRejection[]) => {
-                      console.log('Rejected files', files);
-                    }}
-                    maxSize={5 * 1024 ** 2} // 5 MB
-                    accept={[MIME_TYPES.jpeg, MIME_TYPES.png]}
-                    multiple={false}
-                    style={{
-                      border: '1px dashed #ccc',
-                      borderRadius: '30px',
-                      height: preview ? stageHeight : '60vh', // Dynamic height for nice display
-                      backgroundColor: '#f9f9f9',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                    }}
-                  >
-                    {preview ? (
-                      <Image
-                        src={preview}
-                        alt="Preview"
-                        style={{
-                          border: '1px solid #ccc',
-                          marginTop: 20,
-                          borderRadius: '20px',
-                          display: 'flex',
-                          marginLeft: 'auto',
-                          marginRight: 'auto',
-                          overflow: 'hidden',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                        }}
-                      />
-                    ) : (
-                      <Group justify="center">
-                        <IconUpload size={50} stroke={1.5} color="#888" />
-                        <Text size="md" color="dimmed">Drag an image here or click to select</Text>
-                      </Group>
-                    )}
-                  </Dropzone>
-                  <Group justify="center" mt="xl">
-                    <Button variant="default" onClick={prevStep}>Back</Button>
-                    <Button onClick={nextStep}>Next step</Button>
+              <>
+              <Box>
+              <Title>Upload Your Photo</Title>
+                <Text mb={10}>Upload your photo to remove the background</Text>
+                <Dropzone
+                onDrop={handleDrop}
+                onReject={(files: FileRejection[]) => {
+                  console.log('Rejected files', files);
+                }}
+                maxSize={5 * 1024 ** 2} // 5 MB
+                accept={[MIME_TYPES.jpeg, MIME_TYPES.png]}
+                multiple={false}
+                style={{
+                  border: '1px dashed #ccc',
+                  borderRadius: '30px',
+                  height: preview ? stageHeight : '60vh', // Dynamic height for nice display
+                  backgroundColor: '#f9f9f9',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                }}
+                >
+                {preview ? (
+                  <Image
+                  src={preview}
+                  alt="Preview"
+                  style={{
+                    border: '1px solid #ccc',
+                    marginTop: 20,
+                    borderRadius: '20px',
+                    display: 'flex',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                    overflow: 'hidden',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                  }}
+                  />
+                ) : (
+                  <Group justify="center">
+                  <IconUpload size={50} stroke={1.5} color="#888" />
+                  <Text size="md" color="dimmed">Drag an image here or click to select</Text>
                   </Group>
-                  {preview && (
-                    <Button
-                      color="red"
-                      variant="light"
-                      onClick={handleRemove}
-                      mt="sm"
-                    >
-                      Remove Image
-                    </Button>
-                  )}
-                </>
+                )}
+                </Dropzone>
+                <Group justify="center" mt="xl">
+                <Button variant="default" onClick={prevStep}>Back</Button>
+                <Button onClick={nextStep}>Next step</Button>
+                </Group>
+                {preview && (
+                <Button
+                  color="red"
+                  variant="light"
+                  onClick={handleRemove}
+                  mt="sm"
+                >
+                  Remove Image
+                </Button>
+                )}
+              </Box>
+                
+              </>
               )}
               {active === 2 && (
-                <>
-                  <Title>Masking the Image</Title>
-                  <Text>Select where you want to remove</Text>
-                  <Card withBorder padding="lg" radius="md" mt="md">
-                    <Stack gap="md">
-                      <Group justify="space-between">
-                        <Group justify="flex-start">
-                          <Button leftSection={<IconEraser size={16} />} onClick={() => setIsErasing(true)} variant={isErasing ? "filled" : "outline"} color="red">Eraser</Button>
-                          <Button leftSection={<IconPencil size={16} />} onClick={() => setIsErasing(false)} variant={!isErasing ? "filled" : "outline"} color="blue">Draw</Button>
-                        </Group>
-                        <Button variant="outline" color="red" onClick={clearLines}>Reset All</Button>
-                      </Group>
-                      <Box>
-                        <Text size="sm" mb={4}>
-                          Brush Size: {cursorSize}px
-                        </Text>
-                        <Slider
-                          mb={10}
-                          color="blue"
-                          value={cursorSize}
-                          min={20}
-                          max={80}
-                          step={10}
-                          marks={[
-                            { value: 20, label: "20" },
-                            { value: 40, label: "40" },
-                            { value: 60, label: "60" },
-                            { value: 80, label: "80" },
-                          ]}
-                          onChange={setCursorSize}
-                        />
-                      </Box>
-                    </Stack>
-                  </Card>
-                  {image && (
-                    <>
-                      <Stage
-                        width={stageWidth}
-                        height={stageHeight}
-                        onMouseDown={handleMouseDown}
-                        onMousemove={handleMouseMove}
-                        onMouseup={handleMouseUp}
-                        ref={stageRef}
-                        onMouseLeave={() => setMousePosition(null)}
-                        style={{
-                          border: '1px dashed #ccc',
-                          borderRadius: '30px',
-                          height: preview ? stageHeight : '60vh', // Dynamic height for nice display
-                          backgroundColor: '#f9f9f9',
-                          overflow: 'hidden',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                        }}
-                      >
-                        <Layer>
-                          <KonvaImage
-                            image={image}
-                            x={imageX}
-                            y={imageY}
-                            scale={{ x: scale, y: scale }}
-                          />
-                        </Layer>
-                        <Layer>
-                          {lines.map((line, i) => (
-                            <Line
-                              key={i}
-                              points={line.points}
-                              stroke="white"
-                              strokeWidth={line.cursorSize}
-                              tension={0.5}
-                              lineCap="round"
-                              lineJoin="round"
-                              globalCompositeOperation={line.isErasing ? 'destination-out' : 'source-over'}
-                            />
-                          ))}
-                          {mousePosition && (
-                            <Circle
-                              x={mousePosition.x}
-                              y={mousePosition.y}
-                              radius={cursorSize / 2}
-                              stroke={isErasing ? "red" : "blue"}
-                              strokeWidth={2}
-                              dash={[4, 4]}
-                              listening={false}
-                              opacity={0.8}
-                            />
-                          )}
-                        </Layer>
-                      </Stage>
-
-                    </>
-                  )}
-                  <Group justify="center" mt="xl">
-                    <Button variant="default" onClick={prevStep}>Back</Button>
-                    <Button onClick={sendRequest}>Proceed</Button>
+              <>
+                <Title>Masking the Image</Title>
+                <Text>Select where you want to remove</Text>
+                <Card withBorder padding="lg" radius="md" mt="md">
+                <Stack gap="md" w={image ? image.width : '100%'}>
+                  <Group justify="space-between">
+                  <Group justify="flex-start">
+                    <Button leftSection={<IconEraser size={16} />} onClick={() => setIsErasing(true)} variant={isErasing ? "filled" : "outline"} color="red">Eraser</Button>
+                    <Button leftSection={<IconPencil size={16} />} onClick={() => setIsErasing(false)} variant={!isErasing ? "filled" : "outline"} color="blue">Draw</Button>
                   </Group>
+                  <Button variant="outline" color="red" onClick={clearLines}>Reset All</Button>
+                  </Group>
+                  <Box>
+                  <Text size="sm" mb={4}>
+                    Brush Size: {cursorSize}px
+                  </Text>
+                  <Slider
+                    mb={10}
+                    color="blue"
+                    value={cursorSize}
+                    min={20}
+                    max={80}
+                    step={10}
+                    marks={[
+                    { value: 20, label: "20" },
+                    { value: 40, label: "40" },
+                    { value: 60, label: "60" },
+                    { value: 80, label: "80" },
+                    ]}
+                    onChange={setCursorSize}
+                  />
+                  </Box>
+                </Stack>
+                </Card>
+                {image && (
+                <>
+                  <Stage
+                  width={image.width}
+                  height={image.height}
+                  onMouseDown={handleMouseDown}
+                  onMousemove={handleMouseMove}
+                  onMouseup={handleMouseUp}
+                  ref={stageRef}
+                  onMouseLeave={() => setMousePosition(null)}
+                  style={{
+                    marginTop: 20,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    display: 'flex',
+                  }}
+                  >
+                  <Layer>
+                    <KonvaImage
+                    image={image}
+                    />
+                  </Layer>
+                  <Layer>
+                    {lines.map((line, i) => (
+                    <Line
+                      key={i}
+                      points={line.points}
+                      stroke="white"
+                      strokeWidth={line.cursorSize}
+                      tension={0.5}
+                      lineCap="round"
+                      lineJoin="round"
+                      globalCompositeOperation={line.isErasing ? 'destination-out' : 'source-over'}
+                    />
+                    ))}
+                    {mousePosition && (
+                    <Circle
+                      x={mousePosition.x}
+                      y={mousePosition.y}
+                      radius={cursorSize / 2}
+                      stroke={isErasing ? "red" : "blue"}
+                      strokeWidth={2}
+                      dash={[4, 4]}
+                      listening={false}
+                      opacity={0.8}
+                    />
+                    )}
+                  </Layer>
+                  </Stage>
+
                 </>
+                )}
+                <Group justify="center" mt="xl">
+                <Button variant="default" onClick={prevStep}>Back</Button>
+                <Button onClick={sendRequest}>Proceed</Button>
+                </Group>
+              </>
               )}
               {active === 3 && (
-                <>
-                  <Title>Processing Image</Title>
-                  <Text>Processing your image...</Text>
-                  {isLoading && (
-                    <Loader size={50} />
-                  )}
-                </>
+              <>
+                <Title>Processing Image</Title>
+                <Text>Processing your image...</Text>
+                {isLoading && (
+                <Loader size={50} />
+                )}
+              </>
               )}
               {active === 4 && (
-                <>
-                  <Title>Final Result</Title>
-                  <Text>Your image has been processed successfully!</Text>
+              <>
+                <Title>Final Result</Title>
+                <Text>Your image has been processed successfully!</Text>
+                <Box>
+                <IconCircleCheck size={150} color="green" />
+                </Box>
                   <Group justify="center" mt="xl">
                     <Button variant="default" onClick={prevStep}>Back</Button>
                     <Button onClick={nextStep}>See result</Button>
@@ -549,13 +545,6 @@ function App() {
                       src={preview}
                       alt="Processed Image"
                       style={{
-                        border: '1px solid #ccc',
-                        marginTop: 20,
-                        borderRadius: '20px',
-                        display: 'flex',
-                        marginLeft: 'auto',
-                        marginRight: 'auto',
-                        overflow: 'hidden',
                         alignItems: 'center',
                         justifyContent: 'center',
                         position: 'relative',
