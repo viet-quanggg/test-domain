@@ -227,7 +227,7 @@ function App() {
     <>
       <Box
         style={{
-          position: 'fixed', // stays at the top
+          position: 'absolute', // stays at the top
           top: 0,
           left: 0,
           zIndex: 1000, // make sure it's above everything else
@@ -465,6 +465,17 @@ function App() {
                         onMouseup={handleMouseUp}
                         ref={stageRef}
                         onMouseLeave={() => setMousePosition(null)}
+                        style={{
+                          border: '1px dashed #ccc',
+                          borderRadius: '30px',
+                          height: preview ? stageHeight : '60vh', // Dynamic height for nice display
+                          backgroundColor: '#f9f9f9',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                        }}
                       >
                         <Layer>
                           <KonvaImage
