@@ -1,5 +1,5 @@
 import './App.css'
-import { Stepper, Button, Group, Title, Stack, Box, Text, Image, Slider, Card, Container } from '@mantine/core';
+import { Stepper, Button, Group, Title, Stack, Box, Text, Image, Slider, Card, Container, Loader } from '@mantine/core';
 import { Dropzone, FileRejection, MIME_TYPES } from '@mantine/dropzone';
 import { IconUpload, IconPencil, IconEraser } from '@tabler/icons-react'; // Optional icons
 import 'react-mask-editor/dist/style.css'; // Importing the CSS for react-mask-editor
@@ -30,6 +30,20 @@ const logos = [
 </style>
 
 function App() {
+
+  const getMaskBase64 = (): string | null => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+  
+    // Export only the second Layer (the one with drawings)
+    const drawingLayer = stage.getLayers()[1]; // index 1 = mask layer
+    const dataURL = drawingLayer.toDataURL({ pixelRatio: 1 });
+  
+    // Strip the data:image/png;base64, prefix
+    return dataURL.split(',')[1];
+  };
+  
+
   const [preview, setPreview] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const nextStep = () => setActive((current) => (current < 5 ? current + 1 : current));
@@ -41,17 +55,34 @@ function App() {
   const [isErasing, setIsErasing] = useState(false);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const [cursorSize, setCursorSize] = useState(20);
+  const [origB64, setOrigB64] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
 
   const handleDrop = (files: File[]) => {
     const file = files[0];
     if (file) {
       const previewUrl = URL.createObjectURL(file);
-      console.log('Preview URL:', previewUrl);
-      console.log('File:', file);
-      console.log('Image:', image);
       setPreview(previewUrl);
+  
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1]; // remove data:image/...;base64,
+        setOrigB64(base64String);
+      };
+      reader.readAsDataURL(file);
     }
   };
+
+  const finishStep = () => {
+    setActive(0);
+    setLines([]);
+    setCursorSize(20);
+    setPreview(null);
+    setOrigB64(null);
+  }
+  
 
   const handleRemove = () => {
     if (preview) URL.revokeObjectURL(preview);
@@ -135,57 +166,114 @@ function App() {
     imageX = (stageWidth - scaledWidth) / 2;
     imageY = (stageHeight - scaledHeight) / 2;
   }
+
+  const sendRequest = async () => {
+    if (!origB64) {
+      console.error("Original image is not loaded yet.");
+      return;
+    }
+  
+    const maskB64 = getMaskBase64();
+    if (!maskB64) {
+      console.error("Mask image could not be generated.");
+      return;
+    }
+  
+    const API_KEY = "rpa_I45AJ1AT9H80SE3EKW520CDRHAN7VY9PT7Z7429Z1z0e6t";
+    const scale = 1.0;
+    const step = 50;
+  
+    const payload = {
+      input: {
+        ori_iamge: origB64,
+        mask: maskB64,
+        scale: scale,
+        step: step
+      }
+    };
+  
+    nextStep();
+    setIsLoading(true); // Set loading state to true
+  
+    try {
+      const response = await fetch("https://api.runpod.ai/v2/7tqskzc2yrb73r/runsync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify(payload)
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+  
+      const data = await response.json();
+      clearLines(); 
+      setPreview(null); // Clear the preview
+      const resultImage = `data:image/png;base64,${data.output.result_image}`;
+      setPreview(resultImage); // Update the preview with the processed image
+    } catch (error) {
+      console.error("Error sending request:", error);
+    } finally {
+      setIsLoading(false); // Set loading state to false
+      nextStep(); // Move to the next step
+    }
+  };
+  
+
   return (
     <>
-    <Box
+      <Box
         style={{
-        position: 'fixed', // stays at the top
-        top: 0,
-        left: 0,
-        zIndex: 1000, // make sure it's above everything else
-        width: '100%',
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
+          position: 'fixed', // stays at the top
+          top: 0,
+          left: 0,
+          zIndex: 1000, // make sure it's above everything else
+          width: '100%',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
         }}
         mb={50}
       >
         <Box
-        component="div"
-        style={{
-          display: 'flex',
-          animation: `scroll-left 20s linear infinite`, // Adjust animation duration as needed
-        }}
+          component="div"
+          style={{
+            display: 'flex',
+            animation: `scroll-left 20s linear infinite`, // Adjust animation duration as needed
+          }}
         >
-        {logos.map((logo, index) => (
-          <Image
-          key={index}
-          src={logo}
-          alt={`Logo ${index + 1}`}
-          height={50}
-          style={{
-            display: 'inline-block',
-            marginRight: '80px',
-            verticalAlign: 'middle',
-          }}
-          />
-        ))}
-        {logos.map((logo, index) => (
-          <Image
-          key={`duplicate-${index}`}
-          src={logo}
-          alt={`Logo ${index + 1}`}
-          height={50}
-          style={{
-            display: 'inline-block',
-            marginRight: '80px',
-            verticalAlign: 'middle',
-          }}
-          />
-        ))}
+          {logos.map((logo, index) => (
+            <Image
+              key={index}
+              src={logo}
+              alt={`Logo ${index + 1}`}
+              height={50}
+              style={{
+                display: 'inline-block',
+                marginRight: '80px',
+                verticalAlign: 'middle',
+              }}
+            />
+          ))}
+          {logos.map((logo, index) => (
+            <Image
+              key={`duplicate-${index}`}
+              src={logo}
+              alt={`Logo ${index + 1}`}
+              height={50}
+              style={{
+                display: 'inline-block',
+                marginRight: '80px',
+                verticalAlign: 'middle',
+              }}
+            />
+          ))}
         </Box>
 
         <style>
-        {`
+          {`
         @keyframes scroll-left {
         0% {
           transform: translateX(0%);
@@ -430,7 +518,7 @@ function App() {
                   )}
                   <Group justify="center" mt="xl">
                     <Button variant="default" onClick={prevStep}>Back</Button>
-                    <Button onClick={nextStep}>Next step</Button>
+                    <Button onClick={sendRequest}>Proceed</Button>
                   </Group>
                 </>
               )}
@@ -438,10 +526,9 @@ function App() {
                 <>
                   <Title>Processing Image</Title>
                   <Text>Processing your image...</Text>
-                  <Group justify="center" mt="xl">
-                    <Button variant="default" onClick={prevStep}>Back</Button>
-                    <Button onClick={nextStep}>Next</Button>
-                  </Group>
+                  {isLoading && (
+                    <Loader size={50} />
+                  )}
                 </>
               )}
               {active === 4 && (
@@ -450,7 +537,7 @@ function App() {
                   <Text>Your image has been processed successfully!</Text>
                   <Group justify="center" mt="xl">
                     <Button variant="default" onClick={prevStep}>Back</Button>
-                    <Button onClick={nextStep}>Next</Button>
+                    <Button onClick={nextStep}>See result</Button>
                   </Group>
                 </>
               )}
@@ -458,9 +545,27 @@ function App() {
                 <>
                   <Title>Thank You!</Title>
                   <Text>Your image has been processed successfully!</Text>
+                  {!isLoading && preview && (
+                    <Image
+                      src={preview}
+                      alt="Processed Image"
+                      style={{
+                        border: '1px solid #ccc',
+                        marginTop: 20,
+                        borderRadius: '20px',
+                        display: 'flex',
+                        marginLeft: 'auto',
+                        marginRight: 'auto',
+                        overflow: 'hidden',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                      }}
+                    />
+                  )}
                   <Group justify="center" mt="xl">
                     <Button variant="default" onClick={prevStep}>Back</Button>
-                    <Button onClick={nextStep}>Finish</Button>
+                    <Button onClick={finishStep}>Finish</Button>
                   </Group>
                 </>
               )}
